@@ -157,12 +157,16 @@ public enum JSON : Equatable, CustomStringConvertible {
         }
     }
     
+    public var jsonString: String? {
+        return self.prettyPrint("  ", 0, true)
+    }
+    
     func stringify(_ indent: String = "  ") -> String? {
         guard self != .invalid else {
             assert(true, "The JSON value is invalid")
             return nil
         }
-        return prettyPrint(indent, 0)
+        return prettyPrint(indent, 0, false)
     }
     
     public var description: String {
@@ -172,7 +176,7 @@ public enum JSON : Equatable, CustomStringConvertible {
         return string
     }
     
-    private func prettyPrint(_ indent: String, _ level: Int) -> String {
+    private func prettyPrint(_ indent: String, _ level: Int, _ produceValidJON: Bool) -> String {
         let currentIndent = (0...level).map({ _ in "" }).joined(separator: indent)
         let nextIndent = currentIndent + "  "
         
@@ -184,13 +188,19 @@ public enum JSON : Equatable, CustomStringConvertible {
             return "\(number)"
             
         case .string(let string):
-            return "\"\(string)\""
+            let base: String
+            if produceValidJON {
+                base = string.replacingOccurrences(of: "\"", with: "\\\"").replacingOccurrences(of: "\n", with: "\\n")
+            } else {
+                base = string
+            }
+            return "\"\(base)\""
             
         case .array(let array):
-            return "[\n" + array.map { "\(nextIndent)\($0.prettyPrint(indent, level + 1))" }.joined(separator: ",\n") + "\n\(currentIndent)]"
+            return "[\n" + array.map { "\(nextIndent)\($0.prettyPrint(indent, level + 1, produceValidJON))" }.joined(separator: ",\n") + "\n\(currentIndent)]"
             
         case .object(let dict):
-            return "{\n" + dict.map { "\(nextIndent)\"\($0)\" : \($1.prettyPrint(indent, level + 1))"}.joined(separator: ",\n") + "\n\(currentIndent)}"
+            return "{\n" + dict.map { "\(nextIndent)\"\($0)\" : \($1.prettyPrint(indent, level + 1, produceValidJON))"}.joined(separator: ",\n") + "\n\(currentIndent)}"
             
         case .null:
             return "null"
